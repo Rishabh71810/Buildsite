@@ -23,6 +23,7 @@ require("dotenv").config();
 // Default
 // Default
 const groq_sdk_1 = __importDefault(require("groq-sdk"));
+const prompts_1 = require("./prompts");
 const groq = new groq_sdk_1.default({ apiKey: process.env.GROQ_API_KEY });
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -30,13 +31,17 @@ function main() {
             .create({
             messages: [
                 {
+                    role: "system",
+                    content: (0, prompts_1.getSystemPrompt)()
+                },
+                {
                     role: "user",
-                    content: "Explain the importance of fast language models",
+                    content: "create a todo application using react and typescript with a backend",
                 },
             ],
             stream: true,
             temperature: 0.7,
-            model: "llama-3.3-70b-versatile",
+            model: "llama-3.3-70b-versatile"
         })
             .then((stream) => __awaiter(this, void 0, void 0, function* () {
             var _a, stream_1, stream_1_1;
