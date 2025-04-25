@@ -8,61 +8,92 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __asyncValues = (this && this.__asyncValues) || function (o) {
-    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
-    var m = o[Symbol.asyncIterator], i;
-    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
-    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
-    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv").config();
-// Default
-// Default
+const express_1 = __importDefault(require("express"));
 const groq_sdk_1 = __importDefault(require("groq-sdk"));
 const prompts_1 = require("./prompts");
+const node_1 = require("./defaults/node");
+const react_1 = require("./defaults/react");
+const cors_1 = __importDefault(require("cors"));
 const groq = new groq_sdk_1.default({ apiKey: process.env.GROQ_API_KEY });
-function main() {
-    return __awaiter(this, void 0, void 0, function* () {
-        const completion = yield groq.chat.completions
-            .create({
+const app = (0, express_1.default)();
+app.use((0, cors_1.default)());
+app.use(express_1.default.json());
+app.post("/template", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const prompt = req.body.prompt;
+    try {
+        const response = yield groq.chat.completions.create({
             messages: [
                 {
                     role: "system",
-                    content: (0, prompts_1.getSystemPrompt)()
+                    content: "Return either node or react based on what do you think this project should be. Only return a single word either 'node' or 'react'. Do not return anything extra",
                 },
                 {
                     role: "user",
-                    content: "create a todo application using react and typescript with a backend",
+                    content: prompt,
                 },
             ],
-            stream: true,
+            model: "llama3-70b-8192",
+            max_tokens: 200,
+            temperature: 0,
+        });
+        if (!((_b = (_a = response.choices[0]) === null || _a === void 0 ? void 0 : _a.message) === null || _b === void 0 ? void 0 : _b.content)) {
+            throw new Error('Invalid response from Groq API');
+        }
+        const answer = response.choices[0].message.content.trim().toLowerCase();
+        if (answer === "react") {
+            res.json({
+                prompts: [
+                    prompts_1.BASE_PROMPT,
+                    `Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${react_1.basePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`,
+                ],
+                uiPrompts: [react_1.basePrompt],
+            });
+        }
+        else if (answer === "node") {
+            res.json({
+                prompts: [
+                    `Here is an artifact that contains all files of the project visible to you.\nConsider the contents of ALL files in the project.\n\n${node_1.basePrompt}\n\nHere is a list of files that exist on the file system but are not being shown to you:\n\n  - .gitignore\n  - package-lock.json\n`,
+                ],
+                uiPrompts: [node_1.basePrompt],
+            });
+        }
+        else {
+            res.status(403).json({ message: "You can't access this." });
+        }
+    }
+    catch (err) {
+        console.error("Template Error:", err);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+}));
+app.post("/chat", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const messages = req.body.messages;
+    try {
+        const response = yield groq.chat.completions.create({
+            messages: [
+                {
+                    role: "system",
+                    content: (0, prompts_1.getSystemPrompt)(),
+                },
+                ...messages,
+            ],
+            model: "llama3-70b-8192",
+            max_tokens: 8000,
             temperature: 0.7,
-            model: "llama-3.3-70b-versatile"
-        })
-            .then((stream) => __awaiter(this, void 0, void 0, function* () {
-            var _a, stream_1, stream_1_1;
-            var _b, e_1, _c, _d;
-            var _e, _f;
-            try {
-                for (_a = true, stream_1 = __asyncValues(stream); stream_1_1 = yield stream_1.next(), _b = stream_1_1.done, !_b; _a = true) {
-                    _d = stream_1_1.value;
-                    _a = false;
-                    const chunk = _d;
-                    process.stdout.write(((_f = (_e = chunk.choices[0]) === null || _e === void 0 ? void 0 : _e.delta) === null || _f === void 0 ? void 0 : _f.content) || "");
-                }
-            }
-            catch (e_1_1) { e_1 = { error: e_1_1 }; }
-            finally {
-                try {
-                    if (!_a && !_b && (_c = stream_1.return)) yield _c.call(stream_1);
-                }
-                finally { if (e_1) throw e_1.error; }
-            }
-        }));
-    });
-}
-main();
+        });
+        res.json({
+            response: response.choices[0].message.content,
+        });
+    }
+    catch (err) {
+        console.error("Chat Error:", err);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+}));
+app.listen(3000, () => console.log("Groq API Server running on port 3000"));
