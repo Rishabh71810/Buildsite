@@ -53,7 +53,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ files }) => {
           <div className="flex flex-col items-center justify-center h-full text-gray-500 p-4">
             <Folder size={40} className="mb-2 opacity-50" />
             <p className="text-center">No files generated yet</p>
-          </div>
+          </div> 
         )}
       </div>
     </div>

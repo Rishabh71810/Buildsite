@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
 import { Code, Eye, ArrowLeft } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import ExecutionProgress from './ExecutionProgress';
@@ -8,23 +9,27 @@ import FileExplorer from './FileExplorer';
 import MonacoEditor from './MonacoEditor';
 import WebsitePreview from './WebsitePreview';
 // import { simulateWebsiteGeneration } from '../utils/mockData';
-import { Step } from '../types';
+import { Step, StepType } from '../types';
 import { BACKEND_URL } from '../utils/config';
 import axios from 'axios';
 import { parseXml } from '../utils/steps';
+import { FileItem } from '../types';
 const EditorPage: React.FC = () => {
   const { 
-    prompt, 
+    // prompt, 
     // setWebsite, 
-    website, 
+    
     selectedFile, 
     activeTab, 
     setActiveTab,
     // isGenerating,
     // setIsGenerating
   } = useAppContext();
+  const location = useLocation();
+  const { prompt } = location.state as { prompt: string };
   const [steps, setSteps] = useState<Step[]>([]);
   const navigate = useNavigate();
+  const [files, setFiles] = useState<FileItem[]>([]);
 
   // useEffect(() => {
   //   // If no prompt, redirect back to landing page
@@ -47,6 +52,70 @@ const EditorPage: React.FC = () => {
   //   );
   // }, [prompt, navigate, setWebsite, setIsGenerating]);
 
+  useEffect(() => {
+    let originalFiles = [...files];
+    let updateHappened = false;
+    steps.filter(({status}) => status === "pending").map(step => {
+      updateHappened = true;
+      if (step?.type === StepType.CreateFile) {
+        let parsedPath = step.path?.split("/") ?? []; // ["src", "components", "App.tsx"]
+        let currentFileStructure = [...originalFiles]; // {}
+        let finalAnswerRef = currentFileStructure;
+  
+        let currentFolder = ""
+        while(parsedPath.length) {
+          currentFolder =  `${currentFolder}/${parsedPath[0]}`;
+          let currentFolderName = parsedPath[0];
+          parsedPath = parsedPath.slice(1);
+  
+          if (!parsedPath.length) {
+            // final file
+            let file = currentFileStructure.find(x => x.path === currentFolder)
+            if (!file) {
+              currentFileStructure.push({
+                name: currentFolderName,
+                type: 'file',
+                path: currentFolder,
+                content: step.code
+              })
+            } else {
+              file.content = step.code;
+            }
+          } else {
+            /// in a folder
+            let folder = currentFileStructure.find(x => x.path === currentFolder)
+            if (!folder) {
+              // create the folder
+              currentFileStructure.push({
+                name: currentFolderName,
+                type: 'folder',
+                path: currentFolder,
+                children: []
+              })
+            }
+   
+            currentFileStructure = currentFileStructure.find(x => x.path === currentFolder)!.children!;
+          }
+        }
+        originalFiles = finalAnswerRef;
+      }
+
+    })
+
+    if (updateHappened) {
+
+      setFiles(originalFiles)
+      setSteps(steps => steps.map((s: Step) => {
+        return {
+          ...s,
+          status: "completed"
+        }
+        
+      }))
+    }
+    console.log(files);
+  }, [steps, files]);
+
   async function init(){
     const response = await axios.post(`${BACKEND_URL}/template`,{
       prompt:prompt.trim()
@@ -54,7 +123,10 @@ const EditorPage: React.FC = () => {
 
     const {prompts,uiPrompts}=response.data;
 
-    setSteps(parseXml(uiPrompts[0]));
+    setSteps(parseXml(uiPrompts[0]).map((x:Step)=>({
+    ...x,
+    status:"pending"
+    })));
 
     const stepsResponse = await axios.post(`${BACKEND_URL}/chat`,{
       messages:[...prompts,prompt].map(content=>({
@@ -87,7 +159,7 @@ const EditorPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <Code size={20} className="text-blue-400" />
               <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500">
-                WebsiteBuilder.ai
+                BuilderSite.ai
               </h1>
             </div>
           </div>
@@ -111,7 +183,7 @@ const EditorPage: React.FC = () => {
           <div className="flex-1 flex">
             {/* File Explorer */}
             <div className="w-1/4 p-4 border-r border-gray-700 overflow-auto">
-              <FileExplorer files={website?.files || []} />
+              <FileExplorer files={files} />
             </div>
 
             {/* Editor/Preview Panel */}

@@ -44,7 +44,7 @@ const LandingPage: React.FC = () => {
           >
             <Code size={40} className="text-blue-400" />
             <h1 className="text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400">
-              WebsiteBuilder.ai
+              BuildSite.ai
             </h1>
           </motion.div>
         </div>

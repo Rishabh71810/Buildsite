@@ -1,14 +1,14 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle, AlertCircle, Clock, Loader2 } from 'lucide-react';
-import { ExecutionStep } from '../types';
+import { Step } from '../types';
 
 interface ExecutionProgressProps {
-  steps: ExecutionStep[];
+  steps: Step[];
 }
 
 const ExecutionProgress: React.FC<ExecutionProgressProps> = ({ steps }) => {
-  const getStepIcon = (status: ExecutionStep['status']) => {
+  const getStepIcon = (status: Step['status']) => {
     switch (status) {
       case 'completed':
         return <CheckCircle className="text-green-500" size={18} />;
@@ -22,7 +22,7 @@ const ExecutionProgress: React.FC<ExecutionProgressProps> = ({ steps }) => {
     }
   };
 
-  const getProgressBarColor = (status: ExecutionStep['status']) => {
+  const getProgressBarColor = (status: Step['status']) => {
     switch (status) {
       case 'completed':
         return 'bg-green-500';
@@ -58,11 +58,11 @@ const ExecutionProgress: React.FC<ExecutionProgressProps> = ({ steps }) => {
               {step.description}
             </p>
             
-            {step.progress !== undefined && (
+            {step.status !== undefined && (
               <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
                 <motion.div
                   initial={false}
-                  animate={{ width: `${step.progress}%` }}
+                  animate={{ width: `${step.status}%` }}
                   transition={{ duration: 0.3 }}
                   className={`h-full ${getProgressBarColor(step.status)}`}
                 ></motion.div>
