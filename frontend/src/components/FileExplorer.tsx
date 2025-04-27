@@ -1,16 +1,16 @@
 import React from 'react';
 import { Folder, FileText, ChevronRight } from 'lucide-react';
-import { FileStructure } from '../types';
+import { FileItem } from '../types';
 import { useAppContext } from '../context/AppContext';
 
 interface FileExplorerProps {
-  files: FileStructure[];
+  files: FileItem[];
 }
 
 const FileExplorer: React.FC<FileExplorerProps> = ({ files }) => {
   const { setSelectedFile, selectedFile } = useAppContext();
 
-  const renderFiles = (files: FileStructure[], depth = 0) => {
+  const renderFiles = (files: FileItem[], depth = 0) => {
     return files.map((file) => (
       <div key={file.path} className="text-sm">
         <button

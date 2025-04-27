@@ -7,43 +7,66 @@ import ExecutionProgress from './ExecutionProgress';
 import FileExplorer from './FileExplorer';
 import MonacoEditor from './MonacoEditor';
 import WebsitePreview from './WebsitePreview';
-import { simulateWebsiteGeneration } from '../utils/mockData';
-import { ExecutionStep } from '../types';
-
+// import { simulateWebsiteGeneration } from '../utils/mockData';
+import { Step } from '../types';
+import { BACKEND_URL } from '../utils/config';
+import axios from 'axios';
+import { parseXml } from '../utils/steps';
 const EditorPage: React.FC = () => {
   const { 
     prompt, 
-    setWebsite, 
+    // setWebsite, 
     website, 
     selectedFile, 
     activeTab, 
     setActiveTab,
-    isGenerating,
-    setIsGenerating
+    // isGenerating,
+    // setIsGenerating
   } = useAppContext();
-  const [steps, setSteps] = useState<ExecutionStep[]>([]);
+  const [steps, setSteps] = useState<Step[]>([]);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    // If no prompt, redirect back to landing page
-    if (!prompt) {
-      navigate('/');
-      return;
-    }
+  // useEffect(() => {
+  //   // If no prompt, redirect back to landing page
+  //   if (!prompt) {
+  //     navigate('/');
+  //     return;
+  //   }
 
-    // Start the generation process
-    setIsGenerating(true);
-    simulateWebsiteGeneration(
-      prompt,
-      (updatedSteps) => {
-        setSteps(updatedSteps);
-      },
-      (generatedWebsite) => {
-        setWebsite(generatedWebsite);
-        setIsGenerating(false);
-      }
-    );
-  }, [prompt, navigate, setWebsite, setIsGenerating]);
+  //   // Start the generation process
+  //   setIsGenerating(true);
+  //   simulateWebsiteGeneration(
+  //     prompt,
+  //     (updatedSteps) => {
+  //       setSteps(updatedSteps);
+  //     },
+  //     (generatedWebsite) => {
+  //       setWebsite(generatedWebsite);
+  //       setIsGenerating(false);
+  //     }
+  //   );
+  // }, [prompt, navigate, setWebsite, setIsGenerating]);
+
+  async function init(){
+    const response = await axios.post(`${BACKEND_URL}/template`,{
+      prompt:prompt.trim()
+    });
+
+    const {prompts,uiPrompts}=response.data;
+
+    setSteps(parseXml(uiPrompts[0]));
+
+    const stepsResponse = await axios.post(`${BACKEND_URL}/chat`,{
+      messages:[...prompts,prompt].map(content=>({
+        role:"user",
+        content
+      }))
+    })
+  }
+
+  useEffect(()=>{
+    init();
+  },[])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex flex-col">

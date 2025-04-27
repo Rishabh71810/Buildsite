@@ -1,22 +1,30 @@
-export interface FileStructure {
+export interface FileItem {
   name: string;
-  path: string;
   type: 'file' | 'directory';
-  children?: FileStructure[];
+  children?: FileItem[];
   content?: string;
-  language?: string;
+  path: string;
+}
+export enum StepType{
+  CreateFile,
+  CreateFolder,
+  EditFile,
+  DeleteFile,
+  RunScript 
 }
 
-export interface ExecutionStep {
-  id: string;
+export interface Step {
+  id: string | number;
   title: string;
   description: string;
+  type:StepType;
   status: 'pending' | 'processing' | 'completed' | 'error';
-  progress?: number;
+  code?: string;
+  path?: string;
 }
 
 export interface GeneratedWebsite {
   prompt: string;
-  files: FileStructure[];
-  steps: ExecutionStep[];
+  files: FileItem[];
+  steps: Step[];
 }
