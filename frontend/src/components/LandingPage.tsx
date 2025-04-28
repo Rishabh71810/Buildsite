@@ -18,7 +18,7 @@ const LandingPage: React.FC = () => {
     setPrompt(inputValue);
     
     setTimeout(() => {
-      navigate('/editor');
+      navigate('/editor', { state: { prompt: inputValue } });
     }, 600);
   };
 

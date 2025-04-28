@@ -24,7 +24,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ files }) => {
             }
           }}
         >
-          {file.type === 'directory' ? (
+          {file.type === 'folder' ? (
             <>
               <ChevronRight size={16} className="text-gray-400 mr-1 flex-shrink-0" />
               <Folder size={16} className="text-yellow-400 mr-2 flex-shrink-0" />
@@ -35,7 +35,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ files }) => {
           <span className="text-gray-200 truncate">{file.name}</span>
         </button>
         
-        {file.type === 'directory' && file.children && renderFiles(file.children, depth + 1)}
+        {file.type === 'folder' && file.children && renderFiles(file.children, depth + 1)}
       </div>
     ));
   };

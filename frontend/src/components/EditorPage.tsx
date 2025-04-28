@@ -16,41 +16,24 @@ import { parseXml } from '../utils/steps';
 import { FileItem } from '../types';
 const EditorPage: React.FC = () => {
   const { 
-    // prompt, 
-    // setWebsite, 
-    
     selectedFile, 
     activeTab, 
     setActiveTab,
-    // isGenerating,
-    // setIsGenerating
   } = useAppContext();
   const location = useLocation();
-  const { prompt } = location.state as { prompt: string };
-  const [steps, setSteps] = useState<Step[]>([]);
   const navigate = useNavigate();
+  
+  // Add protection for missing state/prompt
+  const prompt = location.state?.prompt;
+  const [steps, setSteps] = useState<Step[]>([]);
   const [files, setFiles] = useState<FileItem[]>([]);
 
-  // useEffect(() => {
-  //   // If no prompt, redirect back to landing page
-  //   if (!prompt) {
-  //     navigate('/');
-  //     return;
-  //   }
-
-  //   // Start the generation process
-  //   setIsGenerating(true);
-  //   simulateWebsiteGeneration(
-  //     prompt,
-  //     (updatedSteps) => {
-  //       setSteps(updatedSteps);
-  //     },
-  //     (generatedWebsite) => {
-  //       setWebsite(generatedWebsite);
-  //       setIsGenerating(false);
-  //     }
-  //   );
-  // }, [prompt, navigate, setWebsite, setIsGenerating]);
+  // Redirect if no prompt is present
+  useEffect(() => {
+    if (!prompt) {
+      navigate('/');
+    }
+  }, [prompt, navigate]);
 
   useEffect(() => {
     let originalFiles = [...files];
@@ -134,6 +117,11 @@ const EditorPage: React.FC = () => {
         content
       }))
     })
+
+    setSteps(s => [...s, ...parseXml(stepsResponse.data.response).map(x => ({
+      ...x,
+      status: "pending" as "pending"
+    }))]);
   }
 
   useEffect(()=>{
