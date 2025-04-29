@@ -14,6 +14,8 @@ import { BACKEND_URL } from '../utils/config';
 import axios from 'axios';
 import { parseXml } from '../utils/steps';
 import { FileItem } from '../types';
+import { useWebContainer } from '../hooks/useWebContainer';
+import { FileNode } from '@webcontainer/api';
 const EditorPage: React.FC = () => {
   const { 
     selectedFile, 
@@ -27,6 +29,7 @@ const EditorPage: React.FC = () => {
   const prompt = location.state?.prompt;
   const [steps, setSteps] = useState<Step[]>([]);
   const [files, setFiles] = useState<FileItem[]>([]);
+  const webContainer  = useWebContainer();
 
   // Redirect if no prompt is present
   useEffect(() => {
@@ -64,6 +67,13 @@ const EditorPage: React.FC = () => {
             } else {
               file.content = step.code;
             }
+            webContainer?.mount({
+              [currentFolder]:{
+                file:{
+                  contents: step.code
+                }
+              } as FileNode
+            });
           } else {
             /// in a folder
             let folder = currentFileStructure.find(x => x.path === currentFolder)
