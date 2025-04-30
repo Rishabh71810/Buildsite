@@ -7,7 +7,7 @@ import { useAppContext } from '../context/AppContext';
 import ExecutionProgress from './ExecutionProgress';
 import FileExplorer from './FileExplorer';
 import MonacoEditor from './MonacoEditor';
-import WebsitePreview from './WebsitePreview';
+import { PreviewFrame } from './WebsitePreview'; 
 // import { simulateWebsiteGeneration } from '../utils/mockData';
 import { Step, StepType } from '../types';
 import { BACKEND_URL } from '../utils/config';
@@ -29,7 +29,11 @@ const EditorPage: React.FC = () => {
   const prompt = location.state?.prompt;
   const [steps, setSteps] = useState<Step[]>([]);
   const [files, setFiles] = useState<FileItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [templateSet, setTemplateSet] = useState(false);
   const webContainer  = useWebContainer();
+  const [userPrompt, setPrompt] = useState("");
+  const [llmMessages, setLlmMessages] = useState<{role: "user" | "assistant", content: string;}[]>([]);
 
   // Redirect if no prompt is present
   useEffect(() => {
@@ -109,34 +113,95 @@ const EditorPage: React.FC = () => {
     console.log(files);
   }, [steps, files]);
 
-  async function init(){
-    const response = await axios.post(`${BACKEND_URL}/template`,{
-      prompt:prompt.trim()
+
+  useEffect(() => {
+    const createMountStructure = (files: FileItem[]): Record<string, any> => {
+      const mountStructure: Record<string, any> = {};
+  
+      const processFile = (file: FileItem, isRootFolder: boolean) => {  
+        if (file.type === 'folder') {
+          // For folders, create a directory entry
+          mountStructure[file.name] = {
+            directory: file.children ? 
+              Object.fromEntries(
+                file.children.map(child => [child.name, processFile(child, false)])
+              ) 
+              : {}
+          };
+        } else if (file.type === 'file') {
+          if (isRootFolder) {
+            mountStructure[file.name] = {
+              file: {
+                contents: file.content || ''
+              }
+            };
+          } else {
+            // For files, create a file entry with contents
+            return {
+              file: {
+                contents: file.content || ''
+              }
+            };
+          }
+        }
+  
+        return mountStructure[file.name];
+      };
+  
+      // Process each top-level file/folder
+      files.forEach(file => processFile(file, true));
+  
+      return mountStructure;
+    };
+  
+    const mountStructure = createMountStructure(files);
+  
+    // Mount the structure if WebContainer is available
+    console.log(mountStructure);
+    webContainer?.mount(mountStructure);
+  }, [files, webContainer]);
+
+
+  async function init() {
+    const response = await axios.post(`${BACKEND_URL}/template`, {
+      prompt: prompt.trim()
     });
+    setTemplateSet(true);
+    
+    const {prompts, uiPrompts} = response.data;
 
-    const {prompts,uiPrompts}=response.data;
-
-    setSteps(parseXml(uiPrompts[0]).map((x:Step)=>({
-    ...x,
-    status:"pending"
+    setSteps(parseXml(uiPrompts[0]).map((x: Step) => ({
+      ...x,
+      status: "pending"
     })));
 
-    const stepsResponse = await axios.post(`${BACKEND_URL}/chat`,{
-      messages:[...prompts,prompt].map(content=>({
-        role:"user",
+    setLoading(true);
+    const stepsResponse = await axios.post(`${BACKEND_URL}/chat`, {
+      messages: [...prompts, prompt].map(content => ({
+        role: "user",
         content
       }))
     })
+
+    setLoading(false);
 
     setSteps(s => [...s, ...parseXml(stepsResponse.data.response).map(x => ({
       ...x,
       status: "pending" as "pending"
     }))]);
+
+    setLlmMessages([...prompts, prompt].map(content => ({
+      role: "user",
+      content
+    })));
+
+    setLlmMessages(x => [...x, {role: "assistant", content: stepsResponse.data.response}])
   }
 
-  useEffect(()=>{
+  useEffect(() => {
     init();
-  },[])
+  }, [])
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex flex-col">
@@ -216,8 +281,10 @@ const EditorPage: React.FC = () => {
               <div className="flex-1 overflow-hidden">
                 {activeTab === 'code' ? (
                   <MonacoEditor file={selectedFile} />
+                ) : webContainer ? (
+                  <PreviewFrame webContainer={webContainer} files={files}/>
                 ) : (
-                  <WebsitePreview />
+                  <div>Loading...</div>
                 )}
               </div>
             </div>

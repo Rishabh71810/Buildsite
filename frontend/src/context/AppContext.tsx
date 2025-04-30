@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState } from 'react';
-import { ExecutionStep, FileStructure, GeneratedWebsite } from '../types';
+import { Step, FileItem, GeneratedWebsite } from '../types';
 
 interface AppContextType {
   website: GeneratedWebsite | null;
   setWebsite: React.Dispatch<React.SetStateAction<GeneratedWebsite | null>>;
-  selectedFile: FileStructure | null;
-  setSelectedFile: React.Dispatch<React.SetStateAction<FileStructure | null>>;
+  selectedFile: FileItem | null;
+  setSelectedFile: React.Dispatch<React.SetStateAction<FileItem | null>>;
   activeTab: 'code' | 'preview';
   setActiveTab: React.Dispatch<React.SetStateAction<'code' | 'preview'>>;
   prompt: string;
@@ -18,7 +18,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [website, setWebsite] = useState<GeneratedWebsite | null>(null);
-  const [selectedFile, setSelectedFile] = useState<FileStructure | null>(null);
+  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
   const [activeTab, setActiveTab] = useState<'code' | 'preview'>('code');
   const [prompt, setPrompt] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState<boolean>(false);

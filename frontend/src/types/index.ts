@@ -28,3 +28,6 @@ export interface GeneratedWebsite {
   files: FileItem[];
   steps: Step[];
 }
+
+
+
