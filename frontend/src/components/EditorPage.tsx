@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
-import { Code, Eye, ArrowLeft } from 'lucide-react';
+import { Code, Eye, ArrowLeft, Send } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import ExecutionProgress from './ExecutionProgress';
 import FileExplorer from './FileExplorer';
 import MonacoEditor from './MonacoEditor';
 import { PreviewFrame } from './WebsitePreview'; 
+import {Loader} from './Loader';
 // import { simulateWebsiteGeneration } from '../utils/mockData';
 import { Step, StepType } from '../types';
 import { BACKEND_URL } from '../utils/config';
@@ -239,6 +240,54 @@ const EditorPage: React.FC = () => {
         {/* Left panel - Execution Progress */}
         <div className="w-1/3 p-4 border-r border-gray-700 overflow-auto">
           <ExecutionProgress steps={steps} />
+          <div className='mt-6'>
+            {(loading || !templateSet) && <Loader />}
+            {!(loading || !templateSet) && (
+              <div className='space-y-4'>
+                <textarea 
+                  value={userPrompt} 
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="Ask me to modify the website..."
+                  className='w-full min-h-[100px] bg-gray-800 text-white p-4 rounded-xl border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none placeholder-gray-400'
+                />
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={async () => {
+                    if (!userPrompt.trim()) return;
+                    
+                    const newMessage = {
+                      role: "user" as "user",
+                      content: userPrompt
+                    };
+
+                    setLoading(true);
+                    const stepsResponse = await axios.post(`${BACKEND_URL}/chat`, {
+                      messages: [...llmMessages, newMessage]
+                    });
+                    setLoading(false);
+
+                    setLlmMessages(x => [...x, newMessage]);
+                    setLlmMessages(x => [...x, {
+                      role: "assistant",
+                      content: stepsResponse.data.response
+                    }]);
+                    
+                    setSteps(s => [...s, ...parseXml(stepsResponse.data.response).map(x => ({
+                      ...x,
+                      status: "pending" as "pending"
+                    }))]);
+
+                    setPrompt('');
+                  }}
+                  className="w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white px-6 py-3 rounded-xl font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-all disabled:opacity-70 shadow-lg"
+                >
+                  <Send size={18} />
+                  Send Instructions
+                </motion.button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right panel - File Explorer and Editor/Preview */}
