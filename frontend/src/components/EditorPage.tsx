@@ -2,13 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useLocation } from 'react-router-dom';
-import { Code, Eye, ArrowLeft, Send } from 'lucide-react';
+import { Code, Eye, ArrowLeft, Send, Download } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import ExecutionProgress from './ExecutionProgress';
 import FileExplorer from './FileExplorer';
 import MonacoEditor from './MonacoEditor';
 import { PreviewFrame } from './WebsitePreview'; 
 import {Loader} from './Loader';
+import JSZip from 'jszip';
 // import { simulateWebsiteGeneration } from '../utils/mockData';
 import { Step, StepType } from '../types';
 import { BACKEND_URL } from '../utils/config';
@@ -204,6 +205,49 @@ const EditorPage: React.FC = () => {
   }, [])
 
 
+  // Function to download all files as a ZIP
+  const downloadProjectAsZip = async () => {
+    try {
+      const zip = new JSZip();
+      
+      // Helper function to recursively add files to zip
+      const addFilesToZip = (items: FileItem[], folderPath = '') => {
+        items.forEach(item => {
+          const itemPath = folderPath ? `${folderPath}/${item.name}` : item.name;
+          
+          if (item.type === 'file') {
+            // Add file to zip
+            zip.file(itemPath, item.content || '');
+          } else if (item.type === 'folder' && item.children) {
+            // Recursively add folder contents
+            addFilesToZip(item.children, itemPath);
+          }
+        });
+      };
+      
+      // Add all files to the zip
+      addFilesToZip(files);
+      
+      // Generate the zip file
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      
+      // Create a download link and trigger download
+      const downloadUrl = URL.createObjectURL(zipBlob);
+      const downloadLink = document.createElement('a');
+      downloadLink.href = downloadUrl;
+      downloadLink.download = 'project-files.zip';
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      
+      // Clean up the URL object
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Error creating ZIP file:', error);
+      alert('Failed to download files. Please try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-black flex flex-col">
       {/* Header */}
@@ -228,9 +272,22 @@ const EditorPage: React.FC = () => {
             </div>
           </div>
           
-          <div className="text-gray-300 text-sm">
-            <span className="mr-2">Prompt:</span>
-            <span className="font-medium italic">{prompt}</span>
+          <div className="flex items-center gap-4">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={downloadProjectAsZip}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md flex items-center gap-1 text-sm font-medium transition-colors"
+              title="Download project files as ZIP"
+            >
+              <Download size={16} />
+              <span>Download ZIP</span>
+            </motion.button>
+            
+            <div className="text-gray-300 text-sm">
+              <span className="mr-2">Prompt:</span>
+              <span className="font-medium italic">{prompt}</span>
+            </div>
           </div>
         </div>
       </header>
